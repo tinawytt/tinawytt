@@ -34,5 +34,6 @@ public class Morris {
         TreeNode node2=new TreeNode(2,node4,node5);
         TreeNode node1=new TreeNode(1,node2,node3);
 //        Morris.preorderMorris(node1);//1245673
+//        Iterate.postorder(node1);//4675231
     }
 }
