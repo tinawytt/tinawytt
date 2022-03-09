@@ -70,9 +70,9 @@ def load_dataset(base_dir, pattern='*.npz', keys=None):
     fls = []
     files_len = []
     dataset = []
-
+    i = 0
     for root, dirs, files in os.walk(base_dir):
-        i = 0
+        
         for filename in sorted(fnmatch.filter(files, pattern)):
 
             if keys is not None and filename[:-4] in keys:
@@ -83,6 +83,7 @@ def load_dataset(base_dir, pattern='*.npz', keys=None):
                 files_len.append(numpy_array.shape[1])
 
                 dataset.extend([i])
+                
 
                 i += 1
 
@@ -126,6 +127,7 @@ class NumpyDataLoader(SlimDataLoaderBase):
         keys=shorter_keys
         self.files, self.file_len, self.dataset = load_dataset(base_dir=base_dir, pattern=file_pattern, keys=keys )
         
+        
         super(NumpyDataLoader, self).__init__(self.dataset, batch_size, num_batches)
 
         self.batch_size = batch_size
@@ -135,7 +137,7 @@ class NumpyDataLoader(SlimDataLoaderBase):
             self.use_next = False
 
         self.idxs = list(range(0, len(self.dataset)))
-
+        
         self.data_len = len(self.dataset)
 
         self.num_batches = min((self.data_len // self.batch_size)+10, num_batches)
@@ -143,9 +145,11 @@ class NumpyDataLoader(SlimDataLoaderBase):
         if isinstance(label, int):
             label = (label,)
         self.input = input
+        
         self.label = label
-
+        
         self.np_data = np.asarray(self.dataset)
+        
 
     def reshuffle(self):
         print("Reshuffle...")
@@ -154,6 +158,7 @@ class NumpyDataLoader(SlimDataLoaderBase):
 
     def generate_train_batch(self):
         open_arr = random.sample(self._data, self.batch_size)
+        
         return self.get_data_from_array(open_arr)
 
     def __len__(self):
@@ -182,7 +187,6 @@ class NumpyDataLoader(SlimDataLoaderBase):
             raise StopIteration()
 
         open_arr = np_data[idxs]
-
         return self.get_data_from_array(open_arr)
 
     def get_data_from_array(self, open_array):
@@ -190,19 +194,20 @@ class NumpyDataLoader(SlimDataLoaderBase):
         fnames = []
         idxs = []
         labels = []
-
+        
         for idx in open_array:
             fn_name = self.files[idx]
-
-            numpy_array = np.load(fn_name)
-
-            data.append(numpy_array[list(self.input)])   # 'None' keeps the dimension
+            
+            numpy_array = np.load(fn_name)['data']
+            
+            data.append(numpy_array[0:4])   # 'None' keeps the dimension list()list(self.input)
 
             if self.label is not None:
-                labels.append(numpy_array[list(self.input)])   # 'None' keeps the dimension
+                labels.append(numpy_array[4])   # 'None' keeps the dimension list()
 
             fnames.append(self.files[idx])
             idxs.append(idx)
+        
 
         ret_dict = {'data': data, 'fnames': fnames, 'idxs': idxs}
         if self.label is not None:
@@ -226,24 +231,33 @@ class WrappedDataset(Dataset):
         else:
             item = self.dataset[index]
         # item = self.transform(**item)
-        print(type(item))
+        
         old_data=item['data']
         old_seg=item['seg']
         
         new_shape=(128,128,128)
         result_list=[]
-        
+        print(type(old_data)) 
+        print(len(old_data))
+        print(np.unique(old_seg[0]))
+        print("==resizing data==")
         for i in range(len(old_data)):
+            print('here',i)
             result_element = np.zeros(new_shape, dtype=old_data[i].dtype)
             result_element= resize(old_data[i].astype(float), new_shape, order=3, clip=True, anti_aliasing=False)
+            print(result_element.shape)
             result_list.append(result_element)
+            print('here')
         item['data']=result_list
         result_list=[]
         result_element = np.zeros(new_shape, dtype=old_seg[0].dtype)
         unique_labels = np.unique(old_seg[0])
+        print("==resizing segmentations==")
         for i, c in enumerate(unique_labels):
             mask = old_seg[0] == c
             reshaped_multihot = resize(mask.astype(float), new_shape, order=1, mode="edge", clip=True, anti_aliasing=False)
+            print(reshaped_multihot.shape)
+            print(np.unique(reshaped_multihot))
             result_element[reshaped_multihot >= 0.5] = c
         
         result_list.append(result_element)
@@ -303,7 +317,7 @@ class NumpyDataSet(object):
     """
     TODO
     """
-    def __init__(self, base_dir, mode="train", batch_size=16, num_batches=10000000, seed=None, num_processes=8, num_cached_per_queue=8 * 4, target_size=128,
+    def __init__(self, base_dir, mode="train", batch_size=16, num_batches=10000000, seed=None, num_processes=2, num_cached_per_queue=2 * 4, target_size=128,
                  file_pattern='*.npz', label=1, input=(0,), do_reshuffle=True, keys=None):#8*4->2*4  8->2
 
         data_loader = NumpyDataLoader(base_dir=base_dir, mode=mode, batch_size=batch_size, num_batches=num_batches, seed=seed, file_pattern=file_pattern,
@@ -587,13 +601,13 @@ class UNetExperiment3D(PytorchExperiment):
 if __name__ == "__main__":
     sys.path.append("/home/jovyan/main/networks/")
     c = get_config()
-    print(globals().get("__file__"))
+    #print(globals().get("__file__"))
     exp = UNetExperiment3D(config=c, name=c.name, n_epochs=c.n_epochs,
-                             seed=42, append_rnd_to_name=c.append_rnd_string, globs=globals(),
+                             seed=42, append_rnd_to_name=c.append_rnd_string, globs=globals()#,
                              # visdomlogger_kwargs={"auto_start": c.start_visdom},
-                             loggers={
-                                 "visdom": ("visdom", {"auto_start": c.start_visdom})
-                             }
+                             #loggers={
+                            #     "visdom": ("visdom", {"auto_start": c.start_visdom})
+                             #}
                              )
 
     exp.run()
