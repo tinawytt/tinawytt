@@ -1,0 +1,21 @@
+2022-03-11 14:07:17,050 - INFO -   File "/opt/conda/lib/python3.9/site-packages/trixi/experiment/experiment.py", line 80, in run
+    self.train(epoch=epoch)
+
+  File "/home/jovyan/main/datasets/three_dim/datald.py", line 546, in train
+    for data_batch in self.train_data_loader:
+
+  File "/home/jovyan/main/datasets/three_dim/datald.py", line 307, in __next__
+    return next(self.iter)
+
+  File "/opt/conda/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 521, in __next__
+    data = self._next_data()
+
+  File "/opt/conda/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1203, in _next_data
+    return self._process_data(data)
+
+  File "/opt/conda/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1229, in _process_data
+    data.reraise()
+
+  File "/opt/conda/lib/python3.9/site-packages/torch/_utils.py", line 434, in reraise
+    raise exception
+

@@ -237,17 +237,23 @@ class WrappedDataset(Dataset):
         
         new_shape=(128,128,128)
         result_list=[]
-        print(type(old_data)) 
-        print(len(old_data))
-        print(np.unique(old_seg[0]))
+        # print(type(old_data)) 
+        # print(len(old_data))
+        # print(np.unique(old_seg[0]))
         print("==resizing data==")
         for i in range(len(old_data)):
             print('here',i)
-            result_element = np.zeros(new_shape, dtype=old_data[i].dtype)
-            print(old_data[i].shape)
-            result_element= resize(old_data[i].astype(float), new_shape, order=3, clip=True, anti_aliasing=False)
-            print(result_element.shape)
-            result_list.append(result_element)
+            result_array=np.zeros((4,128,128,128),dtype=old_data[i].dtype)
+            for m in range(0,4):
+                
+                result_element = np.zeros(new_shape, dtype=old_data[i].dtype)
+                print(old_data[i][m].shape)
+                result_element= resize(old_data[i][m].astype(float), new_shape, order=3, clip=True, anti_aliasing=False)
+                print("after",result_element.shape)
+                result_array[m]=result_element
+            result_list.append(result_array)
+            print("after1case in batch",result_array.shape)
+            
             print('here')
         item['data']=result_list
         result_list=[]
@@ -256,9 +262,10 @@ class WrappedDataset(Dataset):
         print("==resizing segmentations==")
         for i, c in enumerate(unique_labels):
             mask = old_seg[0] == c
+            print(mask.shape)
             reshaped_multihot = resize(mask.astype(float), new_shape, order=1, mode="edge", clip=True, anti_aliasing=False)
-            print(reshaped_multihot.shape)
-            print(np.unique(reshaped_multihot))
+            print("after",reshaped_multihot.shape)
+            # print(np.unique(reshaped_multihot))
             result_element[reshaped_multihot >= 0.5] = c
         
         result_list.append(result_element)
