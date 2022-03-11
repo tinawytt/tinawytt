@@ -244,6 +244,7 @@ class WrappedDataset(Dataset):
         for i in range(len(old_data)):
             print('here',i)
             result_element = np.zeros(new_shape, dtype=old_data[i].dtype)
+            print(old_data[i].shape)
             result_element= resize(old_data[i].astype(float), new_shape, order=3, clip=True, anti_aliasing=False)
             print(result_element.shape)
             result_list.append(result_element)
