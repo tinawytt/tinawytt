@@ -31,7 +31,7 @@ def get_config():
         # Train parameters
         num_classes=3,
         in_channels=1,
-        batch_size=8,
+        batch_size=1,
         patch_size=64,
         n_epochs=10,
         learning_rate=0.0002,
@@ -260,15 +260,17 @@ class WrappedDataset(Dataset):
         result_element = np.zeros(new_shape, dtype=old_seg[0].dtype)
         unique_labels = np.unique(old_seg[0])
         print("==resizing segmentations==")
-        for i, c in enumerate(unique_labels):
-            mask = old_seg[0] == c
-            print(mask.shape)
-            reshaped_multihot = resize(mask.astype(float), new_shape, order=1, mode="edge", clip=True, anti_aliasing=False)
-            print("after",reshaped_multihot.shape)
-            # print(np.unique(reshaped_multihot))
-            result_element[reshaped_multihot >= 0.5] = c
-        
-        result_list.append(result_element)
+        for m in range(len(old_seg)):
+            for i, c in enumerate(unique_labels):
+                
+                mask = old_seg[m] == c
+                print(mask.shape)
+                reshaped_multihot = resize(mask.astype(float), new_shape, order=1, mode="edge", clip=True, anti_aliasing=False)
+                print("after",reshaped_multihot.shape)
+                # print(np.unique(reshaped_multihot))
+                result_element[reshaped_multihot >= 0.5] = c
+            
+            result_list.append(result_element)
         item['seg']=result_list
         print(np.unique(result_list[0]))
         return item
@@ -325,7 +327,7 @@ class NumpyDataSet(object):
     """
     TODO
     """
-    def __init__(self, base_dir, mode="train", batch_size=16, num_batches=10000000, seed=None, num_processes=2, num_cached_per_queue=2 * 4, target_size=128,
+    def __init__(self, base_dir, mode="train", batch_size=16, num_batches=10000000, seed=None, num_processes=1, num_cached_per_queue=1 * 4, target_size=128,
                  file_pattern='*.npz', label=1, input=(0,), do_reshuffle=True, keys=None):#8*4->2*4  8->2
 
         data_loader = NumpyDataLoader(base_dir=base_dir, mode=mode, batch_size=batch_size, num_batches=num_batches, seed=seed, file_pattern=file_pattern,
@@ -431,14 +433,18 @@ class SoftDiceLoss(nn.Module):
             y = y.long()
         shp_x = x.shape
         shp_y = y.shape
+        print("1",x.shape,y.shape) 
+        # torch.Size([1, 3, 128, 128, 128]) torch.Size([128, 128, 128])
         if self.apply_nonlin is not None:
             x = self.apply_nonlin(x)
         if len(shp_x) != len(shp_y):
             y = y.view((shp_y[0], 1, *shp_y[1:]))
-        # now x and y should have shape (B, C, X, Y(, Z))) and (B, 1, X, Y(, Z))), respectively
+        # now x and y should have shape (B, C, X, Y(, Z))) and (B, 1, X, Y(, Z))), respectively   
+        # torch.Size([1, 3, 128, 128, 128]) torch.Size([128, 1, 128, 128])
         y_onehot = torch.zeros(shp_x)
         if x.device.type == "cuda":
             y_onehot = y_onehot.cuda(x.device.index)
+        print("2",y_onehot.shape,y.shape) 
         y_onehot.scatter_(1, y, 1)
         if not self.do_bg:
             x = x[:, 1:]
@@ -515,10 +521,10 @@ class UNetExperiment3D(PytorchExperiment):
         val_keys = splits[0]['val']
         test_keys = splits[0]['test']
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.train_data_loader = NumpyDataSet(data_dir, target_size=64, batch_size=8,keys=tr_keys)
-        self.val_data_loader = NumpyDataSet(data_dir, target_size=64, batch_size=8,
+        self.train_data_loader = NumpyDataSet(data_dir, target_size=64, batch_size=1,keys=tr_keys)
+        self.val_data_loader = NumpyDataSet(data_dir, target_size=64, batch_size=1,
                                             keys=val_keys, mode="val", do_reshuffle=False)
-        self.model = UNet3D(num_classes=3, in_channels=1)
+        self.model = UNet3D(num_classes=3, in_channels=4)
         self.model.to(self.device)
         self.loss = DC_and_CE_loss({'batch_dice': True, 'smooth': 1e-5, 'smooth_in_nom': True,
                                     'do_bg': False, 'rebalance_weights': None, 'background_weight': 1}, OrderedDict())
